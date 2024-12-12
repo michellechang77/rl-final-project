@@ -19,6 +19,9 @@ import os
 from datetime import datetime
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 
+import logging
+from tqdm import tqdm
+
 
 meta_drive_env_dict_default = {
     "map": "C",
@@ -55,8 +58,8 @@ def create_env(meta_drive_env_dict: Optional[Dict] = None, need_monitor=False):
     if meta_drive_env_dict is None:
         meta_drive_env_dict = meta_drive_env_dict_default
     env = MetaDriveEnv(meta_drive_env_dict)
-    if need_monitor:
-        env = Monitor(env)
+    # if need_monitor:
+    #     env = Monitor(env)
     return env
 
 
@@ -65,6 +68,7 @@ def train(
     meta_drive_env_dict: Optional[Dict] = None,
     ppo_args: Optional[Dict] = None,
     learn_args: Optional[Dict] = None,
+    parallel_envs=2,
 ):
     set_random_seed(0)
     # ppo_arg defaults
@@ -72,20 +76,24 @@ def train(
         ppo_args = {"n_steps": 2048, "batch_size": 100, "verbose": 1}
     if learn_args is None:
         learn_args = {"total_timesteps": 1000, "log_interval": 4}
-
+    # train_env = create_env(meta_drive_env_dict)
     # 4 subprocess to rollout
-    train_env = SubprocVecEnv(  # DummyVecEnv
-        [partial(create_env, meta_drive_env_dict, True) for _ in range(4)]
-    )
+    if parallel_envs > 1:
+        train_env = SubprocVecEnv(
+            [partial(create_env, meta_drive_env_dict) for _ in range(parallel_envs)]
+        )
+    else:
+        train_env = DummyVecEnv([partial(create_env, meta_drive_env_dict)])
     # If no model is provided, create a new one
     if model is None:
-        model = PPO("MlpPolicy", train_env, **ppo_args)
+        model = PPO(policy="MlpPolicy", env=train_env, **ppo_args)
     else:
         # Set the new training environment for the existing model
         model.set_env(train_env)
+    logging.info("starting learning")
     model.learn(**learn_args)
-
-    print("Training is finished! Generate gif ...")
+    train_env.close()
+    logging.info("Training is finished!")
     return model
 
 
@@ -102,7 +110,7 @@ def evaluate(model, meta_drive_env_dict, episodes, trial_name=None, render_args=
 
         now = datetime.now()
         trial_name = now.strftime("%Y%m%d-%H%M%S")
-        os.makedirs(trial_name, exist_ok=True)
+    os.makedirs(trial_name, exist_ok=True)
     # evaluation
     total_reward = 0
     env = create_env(meta_drive_env_dict=meta_drive_env_dict)
@@ -134,12 +142,44 @@ def evaluate(model, meta_drive_env_dict, episodes, trial_name=None, render_args=
 
 
 def execute_trial(
-    model, meta_drive_env_dict, trial_name, episodes, ppo_args, learn_args
+    model,
+    meta_drive_env_dict,
+    trial_name,
+    episodes,
+    ppo_args,
+    learn_args,
+    verbose=True,
+    parallel_envs=1,
 ):
 
-    preview_env(meta_drive_env_dict)
-    model = train(model, meta_drive_env_dict, ppo_args, learn_args)
-    gif, total_reward = evaluate(model, episodes, meta_drive_env_dict, trial_name)
-    # display(gif)
-    print(total_reward)
+    if verbose:
+        # set log level to info
+        # logging.basicConfig(level=logging.INFO)
+        preview_env(meta_drive_env_dict)
+
+    logging.info(f"starting execution of trial {trial_name}")
+    logging.info("configs: ")
+    logging.info(f"model: {model}")
+    logging.info(f"meta_drive_env_dict: {meta_drive_env_dict}")
+    logging.info(f"trial_name: {trial_name}")
+    logging.info(f"episodes: {episodes}")
+    logging.info(f"ppo_args: {ppo_args}")
+    logging.info(f"learn_args: {learn_args}")
+    # logging.info("verbose: ", verbose)
+    logging.info("starting training")
+    model = train(model, meta_drive_env_dict, ppo_args, learn_args, parallel_envs=4)
+    logging.info("training is finished; evaluating model.")
+    gif, total_reward = evaluate(
+        model,
+        episodes=episodes,
+        meta_drive_env_dict=meta_drive_env_dict,
+        trial_name=trial_name,
+    )
+    if verbose:
+        logging.info(total_reward)
+        try:
+            gif.show()
+        except Exception as e:
+            print(e)
     model.save(os.path.join(trial_name, "model"))
+    return model, gif, total_reward
