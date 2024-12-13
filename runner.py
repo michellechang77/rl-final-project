@@ -42,27 +42,27 @@ if __name__ == "__main__":
         # ),
     }
     learn_args = {"total_timesteps": total_timesteps, "log_interval": 4}
-    meta_drive_env_dict = {
-        "map": 3,
-        # This policy setting simplifies the task
-        "discrete_action": True,
-        "discrete_throttle_dim": 3,
-        "discrete_steering_dim": 3,
-        "horizon": 500,
-        # scenario setting
-        "random_spawn_lane_index": False,
-        "num_scenarios": 1,
-        "start_seed": 5,
-        "traffic_density": 0,
-        "accident_prob": 0,
-        "log_level": 50,
-    }
+    # meta_drive_env_dict = {
+    #     "map": 3,
+    #     # This policy setting simplifies the task
+    #     "discrete_action": True,
+    #     "discrete_throttle_dim": 3,
+    #     "discrete_steering_dim": 3,
+    #     "horizon": 500,
+    #     # scenario setting
+    #     "random_spawn_lane_index": False,
+    #     "num_scenarios": 1,
+    #     "start_seed": 5,
+    #     "traffic_density": 0,
+    #     "accident_prob": 0,
+    #     "log_level": 50,
+    # }
     # %%
     # intiial training ########################
     model, gif, total_reward = trainer.execute_trial(
         None,
         meta_drive_env_dict,
-        "init3",
+        "init4",
         episodes,
         ppo_args,
         learn_args,

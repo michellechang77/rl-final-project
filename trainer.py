@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from stable_baselines3.common.monitor import Monitor
 from metadrive.component.map.base_map import BaseMap
 from metadrive.utils import generate_gif
-from IPython.display import Image
+from PIL import Image
 from typing import Optional, Dict
 
 import gymnasium as gym
@@ -138,7 +138,7 @@ def evaluate(model, meta_drive_env_dict, episodes, trial_name=None, render_args=
     finally:
         env.close()
     print("gif generation is finished ...")
-    return Image(open(gif_name, "rb").read()), total_reward
+    return Image(open(gif_name)), total_reward
 
 
 def execute_trial(
