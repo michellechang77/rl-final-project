@@ -1,0 +1,11 @@
+episode,total_reward,termination_reason
+1,240.96153244649227,Destination Reached
+2,240.96159254098492,Destination Reached
+3,240.96158282694915,Destination Reached
+4,240.96159744256258,Destination Reached
+5,240.96166738728525,Destination Reached
+6,240.96149464908967,Destination Reached
+7,240.96149360909357,Destination Reached
+8,240.9614792427895,Destination Reached
+9,240.9615399812476,Destination Reached
+10,240.96149801067548,Destination Reached
